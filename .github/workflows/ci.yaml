@@ -1,7 +1,6 @@
 name: Deploy to S3
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -9,55 +8,44 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    env:
+      AWS_DEFAULT_REGION: us-east-1  # Change if you want a different region
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # 2️⃣ Configure AWS credentials (from Secrets)
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      # 3️⃣ Create S3 bucket if it doesn't exist
-      - name: Create S3 bucket if needed
+      - name: Install AWS CLI
         run: |
-          BUCKET_NAME="cloud-bucket-$(date +%s)"
-          REGION="$AWS_DEFAULT_REGION"
+          sudo apt-get update
+          sudo apt-get install -y awscli
 
-          if [[ -z "$BUCKET_NAME" ]]; then
-          echo "Error: BUCKET_NAME is empty"
-          exit 1
-          fi
+      - name: Create unique S3 bucket
+        id: create_bucket
+        run: |
+          # Generate a globally unique bucket name
+          BUCKET_NAME="my-bucket-${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}"
+          export AWS_S3_BUCKET="$BUCKET_NAME"
+          echo "AWS_S3_BUCKET=$AWS_S3_BUCKET" >> $GITHUB_ENV
 
-          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-          echo "Bucket $BUCKET_NAME already exists"
+          # Check if bucket exists
+          if aws s3api head-bucket --bucket "$AWS_S3_BUCKET" 2>/dev/null; then
+            echo "Bucket $AWS_S3_BUCKET already exists"
           else
-          echo "Creating bucket $BUCKET_NAME in region $REGION"
-  
-          if [[ "$REGION" == "us-east-1" ]]; then
-          aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION"
-          else
-          aws s3api create-bucket \
-          --bucket "$BUCKET_NAME" \
-          --region "$REGION" \
-          --create-bucket-configuration LocationConstraint="$REGION"
-          fi
+            echo "Creating bucket $AWS_S3_BUCKET in region $AWS_DEFAULT_REGION"
+            if [[ "$AWS_DEFAULT_REGION" == "us-east-1" ]]; then
+              aws s3api create-bucket --bucket "$AWS_S3_BUCKET" --region "$AWS_DEFAULT_REGION"
+            else
+              aws s3api create-bucket \
+                --bucket "$AWS_S3_BUCKET" \
+                --region "$AWS_DEFAULT_REGION" \
+                --create-bucket-configuration LocationConstraint="$AWS_DEFAULT_REGION"
+            fi
           fi
 
+      - name: Upload ./public to S3
+        run: |
+          echo "Uploading ./public to s3://$AWS_S3_BUCKET/"
+          aws s3 sync ./public "s3://$AWS_S3_BUCKET/" --acl public-read
 
-      # 4️⃣ Sync ./public folder to S3
-      - name: Upload files to S3
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl public-read --follow-symlinks --delete
-        env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          SOURCE_DIR: ./public
+      - name: Output bucket URL
+        run: echo "Deployed to https://$AWS_S3_BUCKET.s3.amazonaws.com/"
