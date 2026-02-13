@@ -27,6 +27,7 @@ jobs:
       - name: Create S3 bucket if needed
         run: |
           BUCKET_NAME="my-unique-bucket-12345"
+          REGION="$AWS_DEFAULT_REGION"
 
           if [[ -z "$BUCKET_NAME" ]]; then
           echo "Error: BUCKET_NAME is empty"
@@ -36,11 +37,16 @@ jobs:
           if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
           echo "Bucket $BUCKET_NAME already exists"
           else
-          echo "Creating bucket $BUCKET_NAME"
+          echo "Creating bucket $BUCKET_NAME in region $REGION"
+  
+          if [[ "$REGION" == "us-east-1" ]]; then
+          aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION"
+          else
           aws s3api create-bucket \
           --bucket "$BUCKET_NAME" \
-          --region "$AWS_DEFAULT_REGION" \
-          --create-bucket-configuration LocationConstraint="$AWS_DEFAULT_REGION"
+          --region "$REGION" \
+          --create-bucket-configuration LocationConstraint="$REGION"
+          fi
           fi
 
 
