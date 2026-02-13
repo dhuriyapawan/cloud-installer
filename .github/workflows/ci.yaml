@@ -36,8 +36,7 @@ jobs:
                 --create-bucket-configuration LocationConstraint="$AWS_DEFAULT_REGION"
             fi
           fi
-      - name : Build site
-        run: npm run build
+     
       - name: Upload ./public to S3
         run: |
           echo "Uploading ./public to s3://$AWS_S3_BUCKET/"
