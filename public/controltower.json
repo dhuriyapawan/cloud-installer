@@ -1,0 +1,17 @@
+"Condition": {
+                "ForAnyValue:StringEquals": {
+                    "aws:RequestTag/environment": [
+                        "dev",
+                        "qa"
+                    ],
+                    "aws:RequestTag/map-migrated": [
+                        "mig12345"
+                    ],
+                    "aws:RequestTag/project": [
+                        "currentware-saas-migration"
+                    ],
+                    "aws:RequestTag/owner": [
+                        "cw-terraform-iac"
+                    ]
+                }
+            }
