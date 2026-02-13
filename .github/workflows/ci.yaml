@@ -20,7 +20,7 @@ jobs:
       - name: Create unique S3 bucket
         id: create_bucket
         run: |
-          BUCKET_NAME="my-bucket-${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}"
+          BUCKET_NAME="my-bucket-${GITHUB_RUN_ID}-14"
           echo "AWS_S3_BUCKET=$BUCKET_NAME" >> $GITHUB_ENV
 
           if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
