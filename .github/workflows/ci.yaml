@@ -26,13 +26,23 @@ jobs:
       # 3️⃣ Create S3 bucket if it doesn't exist
       - name: Create S3 bucket if needed
         run: |
-          BUCKET_NAME=${{ secrets.AWS_S3_BUCKET }}
-          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-            echo "Bucket $BUCKET_NAME already exists"
-          else
-            echo "Creating bucket $BUCKET_NAME"
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ secrets.AWS_REGION }} --create-bucket-configuration LocationConstraint=${{ secrets.AWS_REGION }}
+          BUCKET_NAME="my-unique-bucket-12345"
+
+          if [[ -z "$BUCKET_NAME" ]]; then
+          echo "Error: BUCKET_NAME is empty"
+          exit 1
           fi
+
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+          echo "Bucket $BUCKET_NAME already exists"
+          else
+          echo "Creating bucket $BUCKET_NAME"
+          aws s3api create-bucket \
+          --bucket "$BUCKET_NAME" \
+          --region "$AWS_DEFAULT_REGION" \
+          --create-bucket-configuration LocationConstraint="$AWS_DEFAULT_REGION"
+          fi
+
 
       # 4️⃣ Sync ./public folder to S3
       - name: Upload files to S3
